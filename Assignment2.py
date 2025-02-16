@@ -1,6 +1,7 @@
 import pandas as pd
 from dateutil import parser
 
+# QUESTION 1
 
 # Import data from each csv file into a dataframe
 province_ab = pd.read_csv("A2 Data/AB.CPI.1810000401.csv")
@@ -55,3 +56,75 @@ combined_df = pd.concat(all_provinces)
 combined_df = combined_df[["Item","Month","Jurisdiction","CPI"]]
 # Printing the first three lines of the dataframe
 print(combined_df.iloc[0:3,:])
+
+
+# QUESTION 2
+
+# Printing the first 12 lines for the data frame
+print(combined_df.iloc[:12,:])
+
+
+# QUESTION 3
+
+
+# Define the categories for reporting
+categories = ["Food", "Shelter", "All-items excluding food and energy"]
+
+# Filter the dataset for the relevant items
+filtered_data = combined_df[combined_df["Item"].isin(categories)]
+
+# Pivot to reshape the data for percentage change calculation
+pivot_data = filtered_data.pivot_table(index=["Jurisdiction", "Item"], columns="Month", values="CPI")
+
+# Ensure the columns are in the correct order from Jan to Dec
+# Extract the month order
+month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+# Extract unique years from the column names
+years = sorted(set(col.split("-")[1] for col in pivot_data.columns))
+
+# Create a properly ordered column list
+ordered_columns = [f"{month}-{year}" for year in years for month in month_order if f"{month}-{year}" in pivot_data.columns]
+
+# Reorder the pivot table
+pivot_data = pivot_data[ordered_columns]
+
+# Compute the month-to-month percentage change
+month_to_month_change = round(pivot_data.pct_change(axis=1) * 100,1)
+
+# Compute the average percentage change for each jurisdiction and category
+avg_monthly_change = month_to_month_change.mean(axis=1).reset_index()
+
+# Renaming columns
+avg_monthly_change.columns = ["Jurisdiction", "Item", "Avg_Monthly_Change (%)"]
+
+# Format the percentage change to one decimal place
+avg_monthly_change["Avg_Monthly_Change (%)"] = avg_monthly_change["Avg_Monthly_Change (%)"].round(1)
+print(avg_monthly_change)
+
+
+#QUESTION 4
+
+#Find the province which experience the highest average change in the each of the category
+max_records = avg_monthly_change.loc[avg_monthly_change.groupby("Item")["Avg_Monthly_Change (%)"].idxmax()]
+print(max_records)
+
+
+#QUESTION 5
+
+# Pivot to reshape the data for annual change in CPI for all services
+pivot_data = combined_df.pivot_table(index=["Jurisdiction", "Item"], columns="Month", values="CPI")
+
+# Calculate the annual change for each services
+pivot_data["Annual_Change"] = ((pivot_data["Dec-24"]-pivot_data["Jan-24"])/pivot_data["Jan-24"] * 100).round(2)
+
+# Calculate the average annual change of services for each jurisdiction
+average_annual_change = round(pivot_data.groupby("Jurisdiction")["Annual_Change"].mean().reset_index(),1)
+average_annual_change
+
+print(average_annual_change)
+      
+      
+# QUESTION 6
+
+print(average_annual_change.loc[average_annual_change["Annual_Change"].idxmax()])
